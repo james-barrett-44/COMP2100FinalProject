@@ -12,6 +12,7 @@ Features:
 - Easy for user 
 
 Team Members:
+
 -Thys Nadema, Developer 
 
 -James Barrett, Developer
