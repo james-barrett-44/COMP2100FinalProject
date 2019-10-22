@@ -3,8 +3,9 @@
 peer to peer file transfer
 
 Deliverables:
--Documention 
-- 
+
+- Documention 
+
 Features:
 - Unique application protocol
 - Sends file up to 1 GB
