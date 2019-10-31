@@ -35,6 +35,8 @@ def get_ip():
         # doesn't even have to be reachable
         s.connect(('10.255.255.255', 1))
         IP = s.getsockname()[0]
+        local_ip.set(IP)
+        print(IP)
     except:
         IP = '127.0.0.1'
     finally:
@@ -109,7 +111,7 @@ def scan_dir():
 def send_file_to_peer():
     global e
     source_file = e.get()
-    server_addr, server_port = '192.168.56.1', '3000'
+    server_addr, server_port = '10.220.49.169', '1234'
     file_size = os.path.getsize(source_file)
     add_line_to_output('Sending file {0} to {1}:{2}'.format(source_file, server_addr, server_port))
     add_line_to_output('Source file size: {0} bytes.'.format(file_size))
@@ -172,7 +174,13 @@ window.geometry("910x620")
 # Row 0
 entryText = tkinter.StringVar()
 tkinter.Label(window, text="My IP address:").grid(row=0, column=0, sticky="W")
-tkinter.Entry(window, width=40).grid(row=0, column=1, sticky="E")
+tkinter.Button(window, text="Get IP", command=get_ip).grid(row=0, column=3, sticky="W")
+
+local_ip = tkinter.StringVar()
+ip_e = tkinter.Entry(window, textvariable=local_ip, width=40)
+ip_e.grid(row=0, column=1, sticky="E")
+
+#tkinter.Entry(window, width=40).grid(row=0, column=1, sticky="E")
 tkinter.Label(window, text="  ").grid(row=0, column=2) #white space between lists
 tkinter.Label(window, text=" ").grid(row=0, column=5) #white space between lists
 

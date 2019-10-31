@@ -44,7 +44,7 @@ if __name__ == '__main__':
     print('Launching bigfile server.')
     serv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        serv_sock.bind(('192.168.56.1', 1234))
+        serv_sock.bind(('10.220.49.169', 1234))
         serv_sock.listen(5)
     except socket.error as e:
         print('Failed to launch server:', e)
