@@ -43,22 +43,24 @@ def get_ip():
         s.close()
     return IP
 
-def check_subnet_for_peers(port, timeout=3.0):
+def check_subnet_for_peers(port=1234, timeout=3.0):
     """https://gist.github.com/awesomebytes/8d5e4ed3b564afa6d3294b2a559e68b7"""
     own_ip = get_ip()
-    #print("Got own ip: " + str(own_ip))
     ip_split = own_ip.split('.')
     subnet = ip_split[:-1]
     subnetstr = '.'.join(subnet)
 
     """hardcode subnet range to scan"""
-    subnetstr = '192.168.56'
+    #subnetstr = '192.168.56'
 
     q = Queue()
     processes = []
     for i in range(1, 255):
         ip = subnetstr + '.' + str(i)
-        #print("Checking ip: " + str(ip))
+        print("Checking ip: " + str(ip))
+        #output_list.insert(tkinter.END, str(ip))
+        add_line_to_output(str(ip))
+        #output_list.update_idletasks()
         p = Process(target=check_peer, args=[ip, port, q])
         processes.append(p)
         p.start()
@@ -80,11 +82,14 @@ def check_subnet_for_peers(port, timeout=3.0):
     for idx, p in enumerate(processes):
         p.join()
 
-    return found_ips
+    #return found_ips
+    peer_list.insert(tkinter.END, found_ips)
+    print(found_ips)
 
 
 def add_line_to_output(msg):
     output_list.insert(tkinter.END, msg)
+    output_list.update_idletasks()
 
 def select_file():
     file_name = askopenfilename()
@@ -177,7 +182,7 @@ tkinter.Label(window, text="My IP address:").grid(row=0, column=0, sticky="W")
 tkinter.Button(window, text="Get IP", command=get_ip).grid(row=0, column=3, sticky="W")
 
 local_ip = tkinter.StringVar()
-ip_e = tkinter.Entry(window, textvariable=local_ip, width=40)
+ip_e = tkinter.Entry(window, textvariable=local_ip, width=35)
 ip_e.grid(row=0, column=1, sticky="E")
 
 #tkinter.Entry(window, width=40).grid(row=0, column=1, sticky="E")
@@ -187,9 +192,10 @@ tkinter.Label(window, text=" ").grid(row=0, column=5) #white space between lists
 # Row 1
 tkinter.Label(window, text="File to send:").grid(row=1, column=0, sticky="W")
 file_name_to_send = tkinter.StringVar()
-e = tkinter.Entry(window, textvariable=file_name_to_send, width=40)
+e = tkinter.Entry(window, textvariable=file_name_to_send, width=35)
 e.grid(row=1, column=1, sticky="E")
 tkinter.Button(window, text="Choose file", command=select_file).grid(row=1, column=3, sticky="W")
+tkinter.Button(window, text="Scan network for peers", command=check_subnet_for_peers).grid(row=1, column=6, sticky="W")
 
 # Row 2
 tkinter.Label(window, text="My file list:").grid(row=2, column=0, sticky="W")
@@ -198,13 +204,13 @@ tkinter.Label(window, text="Peer list:").grid(row=2, column=6, sticky="W")
 
 # Row 3
 myfiles_list = tkinter.Listbox(window, height=15, width=60)
-myfiles_list.grid(row=3, column=0, columnspan=2)
+myfiles_list.grid(row=3, column=0, columnspan=2, sticky="W")
 
 peerfiles_list = tkinter.Listbox(window, height=15, width=60)
-peerfiles_list.grid(row=3, column=3)
+peerfiles_list.grid(row=3, column=3, sticky="W")
 
 peer_list = tkinter.Listbox(window, height=15, width=25)
-peer_list.grid(row=3, column=6, columnspan=2)
+peer_list.grid(row=3, column=6, columnspan=2, sticky="W")
 
 # Row 4
 tkinter.Label(window, text="Output:").grid(row=4, column=0, sticky="W")
@@ -214,7 +220,6 @@ yscrollbar = tkinter.Scrollbar(window)
 xscrollbar = tkinter.Scrollbar(window, orient=HORIZONTAL)
 output_list = tkinter.Listbox(window, height=15, width=123)
 output_list.grid(row=5, column=0, columnspan=5, sticky="W")
-
 
 # Row 6
 tkinter.Button(window, text="Send file!", command=send_file_to_peer).grid(row=6, column=3)

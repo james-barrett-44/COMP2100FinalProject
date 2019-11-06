@@ -41,7 +41,7 @@ def check_subnet_for_peers(port, timeout=3.0):
     subnetstr = '.'.join(subnet)
 
     """hardcode subnet range to scan"""
-    subnetstr = '10.220.49'
+    subnetstr = '10.220.67'
 
     q = Queue()
     processes = []
