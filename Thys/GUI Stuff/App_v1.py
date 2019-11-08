@@ -21,6 +21,9 @@ def add_peer_manually():
     try:
         s.connect((custom_peer, 1234))
         add_line_to_output("Connection open to %s on port 1234" % custom_peer)
+        output_list.insert(tkinter.END, custom_peer)
+        peer_list(tkinter.END, custom_peer)
+        peer_ip.set("Peer IP: s% " % custom_peer)
 
     except socket.error as e:
         add_line_to_output("Connection to %s on port 1234 failed: %s" % (custom_peer, e))
@@ -215,7 +218,9 @@ tkinter.Button(window, text="Scan network for peers", command=check_subnet_for_p
 # Row 2
 tkinter.Label(window, text="My file list:").grid(row=2, column=0, sticky="W")
 tkinter.Label(window, text="Peer file list:").grid(row=2, column=3, sticky="W")
-tkinter.Label(window, text="Peer IP:").grid(row=2, column=3, sticky="E")
+peer_ip = tkinter.StringVar()
+peer_ip = "Peer IP:"
+tkinter.Label(window, text=peer_ip).grid(row=2, column=3, sticky="E")
 tkinter.Label(window, text="Peer list:").grid(row=2, column=6, sticky="W")
 
 # Row 3
