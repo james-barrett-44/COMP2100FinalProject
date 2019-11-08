@@ -112,18 +112,34 @@ def select_file():
     #file_label.pack()
 
 def scan_dir():
+    #global  myfiles_list
     basepath = askdirectory()
     for dir in os.listdir(basepath):
         if os.path.isdir(os.path.join(basepath, dir)):
-            tkinter.Label(window, text=f"Folder: {dir}").pack()
+            myfiles_list.insert(tkinter.END,"Folder: %s" % dir)
+            #myfiles_list.insert(tkinter.END,dir)
+            #tkinter.Label(window, text=f"Folder: {dir}").pack()
             #print(f"Directory: {dir}")
 
     with os.scandir(basepath) as entries:
         for file in entries:
             if file.is_file():
-                tkinter.Label(window, text=f"File: {file.name}").pack()
+                #tkinter.Label(window, text=f"File: {file.name}").pack()
+                myfiles_list.insert(tkinter.END,"File: %s" % file.name)
+                #myfiles_list.insert(tkinter.END,file.name)
                 #print(f"File: {file.name}")
                 #file_list.append(file.name)
+
+def scan_dir_for_files():
+    basepath = askdirectory()
+
+    with os.scandir(basepath) as entries:
+        for file in entries:
+            if file.is_file():
+                myfiles_list.insert(tkinter.END,"File: %s" % file.name)
+                add_line_to_output("Added file: '%s' to my file list" %file.name)
+
+
 
 
 def send_file_to_peer():
@@ -217,6 +233,7 @@ tkinter.Button(window, text="Scan network for peers", command=check_subnet_for_p
 
 # Row 2
 tkinter.Label(window, text="My file list:").grid(row=2, column=0, sticky="W")
+tkinter.Button(window, text="Browse folder", command=scan_dir_for_files).grid(row=2, column=1, sticky="E")
 tkinter.Label(window, text="Peer file list:").grid(row=2, column=3, sticky="W")
 peer_ip = tkinter.StringVar()
 peer_ip = "Peer IP:"
