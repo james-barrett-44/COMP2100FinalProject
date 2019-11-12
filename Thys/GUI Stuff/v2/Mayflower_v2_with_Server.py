@@ -1,6 +1,7 @@
 import os
 from tkinter.filedialog import askdirectory,askopenfilename
 from threading import Thread
+import threading
 import tkinter
 from tkinter import *
 import os
@@ -10,6 +11,7 @@ import getopt
 import socket
 import hashlib
 import socket
+from datetime import datetime
 from multiprocessing import Process, Queue
 import time
 
@@ -203,6 +205,20 @@ def get_list_item():
     l = output_list.get(output_list.curselection())
     print(l)
 
+def random_filename():
+    dt_now = datetime.now()
+    return dt_now.strftime('%Y%m%d%H%M%S%f')
+
+def readn(sock, count):
+    data = b''
+    while len(data) < count:
+        packet = sock.recv(count - len(data))
+        if packet == '':
+            return ''
+        data += packet
+    return data
+
+
 def select_file_in_list():
     #global e
     if myfiles_list.index("end") == 0:
@@ -215,6 +231,80 @@ def select_file_in_list():
         add_line_to_output("No file selected")
 
 
+def file_server():
+    print('Launching bigfile server.')
+    add_line_to_output("Launching bigfile server.")
+    serv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        # serv_sock.bind((get_ip(), 1234))
+        serv_sock.bind((str(ip_e.get()), 1234))
+        serv_sock.listen(5)
+    except socket.error as e:
+        print('Failed to launch server:', e)
+        add_line_to_output("Failed")
+        sys.exit(3)
+    else:
+        print('Server launched, waiting for new connection.')
+        add_line_to_output("Server launched, waiting for new connection.")
+
+    try:
+        clnt_sock, clnt_addr = serv_sock.accept()
+    except socket.error as e:
+        print('Failed to accept new connection:', e)
+        sys.exit(3)
+    else:
+        print('New connection from:', clnt_sock)
+
+    size_buff = readn(clnt_sock, 4)
+    if size_buff == '':
+        print('Failed to receive file size.', file=sys.stderr)
+        clnt_sock.close()
+        serv_sock.close()
+        sys.exit(3)
+
+    size_unpacked = struct.unpack('!I', size_buff)
+    file_size = size_unpacked[0]
+    print('Will receive file of size', file_size, 'bytes.')
+
+    hash_algo = hashlib.sha256()
+
+    filename = random_filename()
+    try:
+        with open(filename, 'wb') as file_handle:
+            while file_size > 0:
+                buffer = clnt_sock.recv(FILE_BUFFER_SIZE)
+                print(len(buffer), 'bytes received.')
+                if buffer == '':
+                    print('End of transmission.')
+                    break
+                hash_algo.update(buffer)
+                file_handle.write(buffer)
+                file_size -= len(buffer)
+            if file_size > 0:
+                print('Failed to receive file,', file_size, 'more bytes to go.')
+    except socket.error as e:
+        print('Failed to receive data:', e, file=sys.stderr)
+        clnt_sock.close()
+        serv_sock.close()
+        sys.exit(3)
+    except IOError as e:
+        print('Failed to write file:', e, file=sys.stderr)
+        clnt_sock.close()
+        serv_sock.close()
+        sys.exit(3)
+    else:
+        print('File transmission completed.')
+
+    clnt_sock.shutdown(socket.SHUT_RD)
+    clnt_sock.close()
+    serv_sock.close()
+    print('Server shutdown.')
+    print('SHA256 digest:', hash_algo.hexdigest())
+
+def start_server():
+    server_thread = threading.Thread(target=file_server)
+    server_thread.start()
+
 if __name__ == '__main__':
 
     FILE_BUFFER_SIZE = 524288
@@ -223,12 +313,11 @@ if __name__ == '__main__':
     window.title("The P2P Mayflower")
     window.geometry("910x620")
 
-
-
     # Row 0
     entryText = tkinter.StringVar()
     tkinter.Label(window, text="My IP address:").grid(row=0, column=0, sticky="W")
-    tkinter.Button(window, text="Get IP", command=get_ip).grid(row=0, column=3, sticky="W")
+    tkinter.Button(window, text="Get IP + start server", command=lambda:[get_ip(),file_server()]).grid(row=0, column=3, sticky="W")
+
 
     custom_peer = tkinter.StringVar()
     custom_peer_e = tkinter.Entry(window, textvariable=custom_peer, width=20)
@@ -283,4 +372,7 @@ if __name__ == '__main__':
     # Row 6
     tkinter.Button(window, text="Send file!", command=send_file_to_peer).grid(row=6, column=3)
     tkinter.Button(window, text="Print output to terminal", command=get_list_item).grid(row=6, column=0)
+    tkinter.Button(window, text="Start Server", command=start_server).grid(row=6, column=6, sticky="E")
     window.mainloop()
+
+
