@@ -9,22 +9,23 @@ import struct
 import getopt
 import socket
 import hashlib
+from datetime import datetime
 import socket
 from multiprocessing import Process, Queue
 import time
 
 def add_peer_manually():
     global custom_peer_e
+    global peer_ip
     custom_peer = custom_peer_e.get()
     add_line_to_output("Connecting to %s" % custom_peer)
     s = socket.socket()
     try:
         s.connect((custom_peer, 1234))
         add_line_to_output("Connection open to %s on port 1234" % custom_peer)
-        output_list.insert(tkinter.END, custom_peer)
-        peer_list(tkinter.END, custom_peer)
-        peer_ip.set("Peer IP: s% " % custom_peer)
-
+        peer_list.insert(tkinter.END, custom_peer)
+        peer_ip.set("Peer IP: %s " % custom_peer)
+        s.close()
     except socket.error as e:
         add_line_to_output("Connection to %s on port 1234 failed: %s" % (custom_peer, e))
 
@@ -105,7 +106,8 @@ def check_subnet_for_peers(port=1234, timeout=3.0):
 
 
 def add_line_to_output(msg):
-    output_list.insert(tkinter.END, msg)
+    t = datetime.now().strftime('%H:%M:%S')
+    output_list.insert(tkinter.END, t+": "+msg)
     output_list.update_idletasks()
 
 def select_file():
@@ -137,21 +139,21 @@ def scan_dir():
 
 def scan_dir_for_files():
     basepath = askdirectory()
-
+    global output_label
     with os.scandir(basepath) as entries:
         for file in entries:
             if file.is_file():
                 myfiles_list.insert(tkinter.END,file.name)
+                output_label.set("Output | Path: %s" % basepath)
+                #ol.update_idletasks()
                 add_line_to_output("Added file: '%s' to my file list" %file.name)
-
-
-
+    return basepath
 
 
 def send_file_to_peer():
-    global e
-    source_file = e.get()
-    server_addr, server_port = '10.220.49.169', '1234'
+    global source_file_name
+    source_file = source_file_name.get()
+    server_addr, server_port = '10.220.74.146', '1234'
     file_size = os.path.getsize(source_file)
     add_line_to_output('Sending file {0} to {1}:{2}'.format(source_file, server_addr, server_port))
     add_line_to_output('Source file size: {0} bytes.'.format(file_size))
@@ -209,7 +211,7 @@ def select_file_in_list():
         add_line_to_output("No file(s) available")
     elif myfiles_list.curselection():
         list_file = myfiles_list.get(myfiles_list.curselection())
-        file_name_to_send.set(list_file)
+        file_name_to_send.set(str(output_label.get()[15:])+"/"+list_file)
         add_line_to_output("Selected file: %s as file to send" % list_file)
     else:
         add_line_to_output("No file selected")
@@ -246,8 +248,8 @@ if __name__ == '__main__':
     # Row 1
     tkinter.Label(window, text="File to send:").grid(row=1, column=0, sticky="W")
     file_name_to_send = tkinter.StringVar()
-    e = tkinter.Entry(window, textvariable=file_name_to_send, width=35)
-    e.grid(row=1, column=1, sticky="E")
+    source_file_name = tkinter.Entry(window, textvariable=file_name_to_send, width=35)
+    source_file_name.grid(row=1, column=1, sticky="E")
     tkinter.Button(window, text="Choose file", command=select_file).grid(row=1, column=3, sticky="W")
     tkinter.Button(window, text="Scan network for peers", command=check_subnet_for_peers).grid(row=1, column=6, sticky="W")
 
@@ -257,8 +259,8 @@ if __name__ == '__main__':
     tkinter.Button(window, text="Browse folder", command=scan_dir_for_files).grid(row=2, column=1, sticky="E")
     tkinter.Label(window, text="Peer file list:").grid(row=2, column=3, sticky="W")
     peer_ip = tkinter.StringVar()
-    peer_ip = "Peer IP:"
-    tkinter.Label(window, text=peer_ip).grid(row=2, column=3, sticky="E")
+    peer_ip.set("Peer IP:")
+    tkinter.Label(window, textvariable=peer_ip).grid(row=2, column=3, sticky="E")
     tkinter.Label(window, text="Peer list:").grid(row=2, column=6, sticky="W")
 
     # Row 3
@@ -272,7 +274,9 @@ if __name__ == '__main__':
     peer_list.grid(row=3, column=6, columnspan=2, sticky="W")
 
     # Row 4
-    tkinter.Label(window, text="Output:").grid(row=4, column=0, sticky="W")
+    output_label = tkinter.StringVar()
+    output_label.set("Output | Path:")
+    tkinter.Label(window, textvariable=output_label).grid(row=4, column=0, columnspan=6, sticky="W")
 
     # Row 5, yscrollcommand=yscrollbar.set
     yscrollbar = tkinter.Scrollbar(window)

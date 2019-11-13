@@ -24,7 +24,7 @@ def add_peer_manually():
         s.connect((custom_peer, 1234))
         add_line_to_output("Connection open to %s on port 1234" % custom_peer)
         output_list.insert(tkinter.END, custom_peer)
-        peer_list(tkinter.END, custom_peer)
+        peer_list.insert(tkinter.END, custom_peer)
         peer_ip.set("Peer IP: s% " % custom_peer)
 
     except socket.error as e:
@@ -107,7 +107,8 @@ def check_subnet_for_peers(port=1234, timeout=3.0):
 
 
 def add_line_to_output(msg):
-    output_list.insert(tkinter.END, msg)
+    t = datetime.now().strftime('%H:%M:%S')
+    output_list.insert(tkinter.END, t+": "+msg)
     output_list.update_idletasks()
 
 def select_file():
@@ -145,9 +146,6 @@ def scan_dir_for_files():
             if file.is_file():
                 myfiles_list.insert(tkinter.END,file.name)
                 add_line_to_output("Added file: '%s' to my file list" %file.name)
-
-
-
 
 
 def send_file_to_peer():
@@ -238,7 +236,7 @@ def file_server():
     try:
         # serv_sock.bind((get_ip(), 1234))
         serv_sock.bind((str(ip_e.get()), 1234))
-        serv_sock.listen(5)
+        serv_sock.listen(99)
     except socket.error as e:
         print('Failed to launch server:', e)
         add_line_to_output("Failed")
