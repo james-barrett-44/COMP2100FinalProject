@@ -24,10 +24,19 @@ def add_peer_manually():
         s.connect((custom_peer, 1234))
         add_line_to_output("Connection open to %s on port 1234" % custom_peer)
         peer_list.insert(tkinter.END, custom_peer)
-        peer_ip.set("Peer IP: %s " % custom_peer)
+        #peer_ip.set("Peer IP: %s " % custom_peer)
         s.close()
     except socket.error as e:
         add_line_to_output("Connection to %s on port 1234 failed: %s" % (custom_peer, e))
+
+def select_peer():
+    if peer_list.curselection():
+        selected_peer_ip = peer_list.get(peer_list.curselection())
+        peer_ip.set("Peer IP: %s " % selected_peer_ip)
+        add_line_to_output("Selected peer: " + str(selected_peer_ip))
+        add_line_to_output(peer_ip.get()[9:])
+    else:
+        add_line_to_output("No peer IP selected or not available")
 
 def check_peer(address, port, queue):
     """
@@ -75,7 +84,7 @@ def check_subnet_for_peers(port=1234, timeout=3.0):
     for i in range(1, 255):
         ip = subnetstr + '.' + str(i)
         #print("Checking ip: " + str(ip))
-        #add_line_to_output(str(ip))
+        #add_line_to_output("Checking ip: " + str(ip))
         p = Process(target=check_peer, args=[ip, port, q])
         processes.append(p)
         p.start()
@@ -132,7 +141,7 @@ def scan_dir():
         for file in entries:
             if file.is_file():
                 #tkinter.Label(window, text=f"File: {file.name}").pack()
-                myfiles_list.insert(tkinter.END,"File: %s" % file.name)
+                myfiles_list.insert(tkinter.END, "File: %s" % file.name)
                 #myfiles_list.insert(tkinter.END,file.name)
                 #print(f"File: {file.name}")
                 #file_list.append(file.name)
@@ -153,7 +162,7 @@ def scan_dir_for_files():
 def send_file_to_peer():
     global source_file_name
     source_file = source_file_name.get()
-    server_addr, server_port = '10.220.74.146', '1234'
+    server_addr, server_port = peer_ip.get()[9:-1], '1234'
     file_size = os.path.getsize(source_file)
     add_line_to_output('Sending file {0} to {1}:{2}'.format(source_file, server_addr, server_port))
     add_line_to_output('Source file size: {0} bytes.'.format(file_size))
@@ -191,8 +200,8 @@ def send_file_to_peer():
                 conn.sendall(buffer)
                 hash_algo.update(buffer)
                 buffer = file_handle.read(FILE_BUFFER_SIZE)
-    except IOError as e:
-        add_line_to_output('Failed to open source file {0} : {1} {2}'.format(source_file, e, file=sys.stderr))
+    except IOError as er:
+        add_line_to_output('Failed to open source file {0} : {1} {2}'.format(source_file, er, sys.stderr))
 
 
     conn.shutdown(socket.SHUT_WR)
@@ -251,6 +260,7 @@ if __name__ == '__main__':
     source_file_name = tkinter.Entry(window, textvariable=file_name_to_send, width=35)
     source_file_name.grid(row=1, column=1, sticky="E")
     tkinter.Button(window, text="Choose file", command=select_file).grid(row=1, column=3, sticky="W")
+    tkinter.Button(window, text="Select peer", command=select_peer).grid(row=1, column=3, sticky="E")
     tkinter.Button(window, text="Scan network for peers", command=check_subnet_for_peers).grid(row=1, column=6, sticky="W")
 
     # Row 2

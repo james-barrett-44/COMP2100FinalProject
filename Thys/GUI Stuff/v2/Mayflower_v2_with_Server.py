@@ -236,7 +236,7 @@ def file_server():
     try:
         # serv_sock.bind((get_ip(), 1234))
         serv_sock.bind((str(ip_e.get()), 1234))
-        serv_sock.listen(99)
+        serv_sock.listen(5)
     except socket.error as e:
         print('Failed to launch server:', e)
         add_line_to_output("Failed")
@@ -308,7 +308,7 @@ if __name__ == '__main__':
     FILE_BUFFER_SIZE = 524288
 
     window = tkinter.Tk()
-    window.title("The P2P Mayflower")
+    window.title("The P2P Mayflower with SERVER")
     window.geometry("910x620")
 
     # Row 0
