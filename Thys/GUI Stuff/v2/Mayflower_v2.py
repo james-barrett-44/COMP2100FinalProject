@@ -176,13 +176,9 @@ def send_file_to_peer():
 
     else:
         add_line_to_output('Connection established.')
-    #file_check = b''
-    file_check = "File:"
 
-    b = file_check.encode('utf-8')
-
-    #file_check2 = struct.pack('!I', file_check)
-    conn.send(b)
+    b = "File:".encode()
+    conn.sendall(b)
 
     add_line_to_output('Sending file size to remote server.')
     buffer = b''

@@ -257,7 +257,7 @@ def file_server():
 
 
     try:
-        file_name_recv = clnt_sock.recv(FILE_BUFFER_SIZE).decode('utf-8')
+        file_name_recv = clnt_sock.recv(FILE_BUFFER_SIZE).decode()
         if file_name_recv[:5] == "File:":
             size_buff = readn(clnt_sock, 4)
             if size_buff == '':
