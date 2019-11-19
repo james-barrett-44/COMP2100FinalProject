@@ -15,6 +15,7 @@ from datetime import datetime
 from multiprocessing import Process, Queue
 import time
 
+
 def add_peer_manually():
     global custom_peer_e
     custom_peer = custom_peer_e.get()
@@ -234,8 +235,8 @@ def file_server():
     add_line_to_output("Launching bigfile server.")
     serv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        # serv_sock.bind((get_ip(), 1234))
-        serv_sock.bind((str(ip_e.get()), 1234))
+        serv_sock.bind((get_ip(), 1234))
+        #serv_sock.bind((str(ip_e.get()), 1234))
         serv_sock.listen(5)
     except socket.error as e:
         print('Failed to launch server:', e)
@@ -253,54 +254,67 @@ def file_server():
     else:
         print('New connection from:', clnt_sock)
 
-    size_buff = readn(clnt_sock, 4)
-    if size_buff == '':
-        print('Failed to receive file size.', file=sys.stderr)
-        clnt_sock.close()
-        serv_sock.close()
-        sys.exit(3)
 
-    size_unpacked = struct.unpack('!I', size_buff)
-    file_size = size_unpacked[0]
-    print('Will receive file of size', file_size, 'bytes.')
 
-    hash_algo = hashlib.sha256()
-
-    filename = random_filename()
     try:
-        with open(filename, 'wb') as file_handle:
-            while file_size > 0:
-                buffer = clnt_sock.recv(FILE_BUFFER_SIZE)
-                print(len(buffer), 'bytes received.')
-                if buffer == '':
-                    print('End of transmission.')
-                    break
-                hash_algo.update(buffer)
-                file_handle.write(buffer)
-                file_size -= len(buffer)
-            if file_size > 0:
-                print('Failed to receive file,', file_size, 'more bytes to go.')
-    except socket.error as e:
-        print('Failed to receive data:', e, file=sys.stderr)
-        clnt_sock.close()
-        serv_sock.close()
-        sys.exit(3)
-    except IOError as e:
-        print('Failed to write file:', e, file=sys.stderr)
-        clnt_sock.close()
-        serv_sock.close()
-        sys.exit(3)
-    else:
-        print('File transmission completed.')
+        file_name_recv = clnt_sock.recv(FILE_BUFFER_SIZE).decode('utf-8')
+        if file_name_recv[:5] == "File:":
+            size_buff = readn(clnt_sock, 4)
+            if size_buff == '':
+                print('Failed to receive file size.', file=sys.stderr)
+                clnt_sock.close()
+                serv_sock.close()
+                sys.exit(3)
 
-    clnt_sock.shutdown(socket.SHUT_RD)
-    clnt_sock.close()
-    serv_sock.close()
-    print('Server shutdown.')
-    print('SHA256 digest:', hash_algo.hexdigest())
+            size_unpacked = struct.unpack('!I', size_buff)
+            file_size = size_unpacked[0]
+            print('Will receive file of size', file_size, 'bytes.')
+
+            hash_algo = hashlib.sha256()
+
+            filename = random_filename()
+            try:
+                with open(filename, 'wb') as file_handle:
+                    while file_size > 0:
+                        buffer = clnt_sock.recv(FILE_BUFFER_SIZE)
+                        print(len(buffer), 'bytes received.')
+                        if buffer == '':
+                            print('End of transmission.')
+                            break
+                        hash_algo.update(buffer)
+                        file_handle.write(buffer)
+                        file_size -= len(buffer)
+                    if file_size > 0:
+                        print('Failed to receive file,', file_size, 'more bytes to go.')
+            except socket.error as e:
+                print('Failed to receive data:', e, file=sys.stderr)
+                clnt_sock.close()
+                serv_sock.close()
+                sys.exit(3)
+            except IOError as e:
+                print('Failed to write file:', e, file=sys.stderr)
+                clnt_sock.close()
+                serv_sock.close()
+                sys.exit(3)
+            else:
+                print('File transmission completed.')
+
+            clnt_sock.shutdown(socket.SHUT_RD)
+            clnt_sock.close()
+            serv_sock.close()
+            print('Server shutdown.')
+            print('SHA256 digest:', hash_algo.hexdigest())
+    except socket.error as e:
+        print("Failed to receive:", e)
+        clnt_sock.close()
+    else:
+        print("Client not sending file")
+
 
 def start_server():
     server_thread = threading.Thread(target=file_server)
+    server_thread.daemon = True
+    #server_thread.join()
     server_thread.start()
 
 if __name__ == '__main__':
@@ -314,7 +328,7 @@ if __name__ == '__main__':
     # Row 0
     entryText = tkinter.StringVar()
     tkinter.Label(window, text="My IP address:").grid(row=0, column=0, sticky="W")
-    tkinter.Button(window, text="Get IP + start server", command=lambda:[get_ip(),file_server()]).grid(row=0, column=3, sticky="W")
+    tkinter.Button(window, text="Get IP", command=get_ip).grid(row=0, column=3, sticky="W")
 
 
     custom_peer = tkinter.StringVar()
