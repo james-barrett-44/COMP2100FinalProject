@@ -158,7 +158,8 @@ def scan_dir_for_files():
                 add_line_to_output("Added file: '%s' to my file list" %file.name)
     return basepath
 
-
+import tkinter
+from tkinter import *
 def send_file_to_peer():
     global source_file_name
     source_file = source_file_name.get()

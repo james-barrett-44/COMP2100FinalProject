@@ -254,8 +254,6 @@ def file_server():
     else:
         print('New connection from:', clnt_sock)
 
-
-
     try:
         file_name_recv = clnt_sock.recv(FILE_BUFFER_SIZE).decode()
         if file_name_recv[:5] == "File:":
