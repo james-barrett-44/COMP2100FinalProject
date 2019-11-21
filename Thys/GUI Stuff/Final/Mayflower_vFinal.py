@@ -156,24 +156,6 @@ def select_file():
     return file_name
     #file_label.pack()
 
-def scan_dir():
-    #global  myfiles_list
-    #basepath = askdirectory()
-    #for dir in os.listdir(basepath):
-       # if os.path.isdir(os.path.join(basepath, dir)):
-            #myfiles_list.insert(tkinter.END,"Folder: %s" % dir)
-            #myfiles_list.insert(tkinter.END,dir)
-            #tkinter.Label(window, text=f"Folder: {dir}").pack()
-            #print(f"Directory: {dir}")
-
-    with os.scandir(basepath) as entries:
-        for file in entries:
-            if file.is_file():
-                #tkinter.Label(window, text=f"File: {file.name}").pack()
-                myfiles_list.insert(tkinter.END, "File: %s" % file.name)
-                #myfiles_list.insert(tkinter.END,file.name)
-                #print(f"File: {file.name}")
-                #file_list.append(file.name)
 
 def scan_dir_for_files():
     basepath = askdirectory()
@@ -455,13 +437,11 @@ if __name__ == '__main__':
     FILE_BUFFER_SIZE = 524288
 
     window = tkinter.Tk()
-    window.title("The P2P Mayflower v2.5")
+    window.title("The P2P Mayflower vFinal")
     window.geometry("910x620")
     window.resizable(0, 0)
 
     menubar = Menu(window)
-
-
     servermenu = Menu(menubar, tearoff=0)
     servermenu.add_command(label="Start server", command=start_server)
     servermenu.add_command(label="(Re)Start server", command=start_server)
@@ -473,9 +453,9 @@ if __name__ == '__main__':
     helpmenu.add_command(label="General help", command=lambda: popupmsg("Here comes basic help instructions"))
     menubar.add_cascade(label="Help", menu=helpmenu)
 
-
     window.config(menu=menubar)
-    # Row 0
+
+    # Row 10
     entryText = tkinter.StringVar()
     tkinter.Label(window, text="My IP address:").grid(row=0, column=0, sticky="W")
     tkinter.Button(window, text="Get IP", command=get_ip).grid(row=0, column=3, sticky="W")
