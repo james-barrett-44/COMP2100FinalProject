@@ -177,7 +177,7 @@ def scan_dir_for_files():
     return basepath
 
 
-def aks_peer_file_list():
+def ask_peer_file_list():
     server_addr, server_port = peer_ip.get()[9:-1], '1234'
     add_line_to_output('Connecting to peer.')
     conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -188,11 +188,21 @@ def aks_peer_file_list():
         add_line_to_output('Failed to connect to peer: {0}'.format(e))
 
     else:
-        add_line_to_output('Connection established.')
+        add_line_to_output('Connection established for asking.')
 
-    ask = "List:".encode()
+    ask = "List:"
+    ask = pickle.dumps(ask)
+    print(ask)
     conn.sendall(ask)
+    peerfiles_list.delete(0, END)
     add_line_to_output("Asking peer file list")
+
+    peer_file_list_recv = conn.recv(FILE_BUFFER_SIZE)
+    print("first recv: %s" % peer_file_list_recv)
+    print("First recv type: %s" % type(peer_file_list_recv))
+    peer_file_list_recv = pickle.loads(peer_file_list_recv)
+    print("Second recv: %s " % peer_file_list_recv)
+    insert_peer_files(peer_file_list_recv)
 
 
 def send_myfile_list():
@@ -216,9 +226,6 @@ def send_myfile_list():
     print(type(l_bytes))
     conn.sendall(l_bytes)
     add_line_to_output('Sending my file list to peer.')
-
-
-
 
 
 def send_file_to_peer():
@@ -336,8 +343,10 @@ def file_server():
 
     try:
         file_name_recv = clnt_sock.recv(FILE_BUFFER_SIZE)
+        print(file_name_recv)
         try:
             file_name_recv = pickle.loads(file_name_recv)
+            print(file_name_recv)
         except:
             add_line_to_output("Peer connected manually or with network scan")
         if file_name_recv[:5] == "File:":
@@ -397,17 +406,18 @@ def file_server():
             add_line_to_output('SHA256 digest: %s ' % hash_algo.hexdigest())
             print('Server shutdown.')
             add_line_to_output('Server shutdown.')
-        elif isinstance(file_name_recv, list):
-            print(file_name_recv)
-            insert_peer_files(file_name_recv)
         elif file_name_recv[:5] == "List:":
             list_to_send = myfiles_list.get(0, END)
             list_to_send = list(list_to_send)
-            print(list_to_send)
-            l_bytes = pickle.dumps(list_to_send)
-            print(l_bytes)
-            print(type(l_bytes))
-            clnt_sock.sendall(l_bytes)
+            print("Sending file list: %s" % list_to_send)
+            list_to_send_pickle = pickle.dumps(list_to_send)
+            print("Pickle: %s" % list_to_send_pickle)
+            print("Pickle type: %s" % type(list_to_send_pickle))
+            clnt_sock.sendall(list_to_send_pickle)
+        elif isinstance(file_name_recv, list):
+            print(file_name_recv)
+            insert_peer_files(file_name_recv)
+
 
     except socket.error as e:
         print("Failed to receive:", e)
@@ -497,7 +507,7 @@ if __name__ == '__main__':
     #tkinter.Button(window, text="Print output to terminal", command=get_list_item).grid(row=6, column=0)
     #tkinter.Button(window, text="Print file list", command=print_file_list).grid(row=6, column=0)
     tkinter.Button(window, text="Send file list", command=send_myfile_list).grid(row=6, column=0, sticky='w')
-    tkinter.Button(window, text="ASk", command=aks_peer_file_list).grid(row=6, column=0, sticky='e')
+    tkinter.Button(window, text="ASk", command=ask_peer_file_list).grid(row=6, column=0, sticky='e')
     tkinter.Button(window, text="Clear output", command=clear_output).grid(row=6, column=1)
     tkinter.Button(window, text="Send file!", command=send_file_to_peer).grid(row=6, column=3)
     tkinter.Button(window, text="(Re)start Server", command=start_server).grid(row=6, column=6, sticky="E")
