@@ -191,7 +191,7 @@ def send_file_to_peer():
                 hash_algo.update(buffer)
                 buffer = file_handle.read(FILE_BUFFER_SIZE)
     except IOError as e:
-        add_line_to_output('Failed to open source file {0} : {1} {2}'.format(source_file, e, file=sys.stderr))
+        add_line_to_output('Failed to open source file {0} : {1} {2}'.format(source_file, e, sys.stderr))
 
 
     conn.shutdown(socket.SHUT_WR)
@@ -237,10 +237,10 @@ def file_server():
     try:
         serv_sock.bind((get_ip(), 1234))
         #serv_sock.bind((str(ip_e.get()), 1234))
-        serv_sock.listen(5)
+        serv_sock.listen(99)
     except socket.error as e:
         print('Failed to launch server:', e)
-        add_line_to_output("Failed")
+        add_line_to_output("Failed to launch server: %s" % e)
         sys.exit(3)
     else:
         print('Server launched, waiting for new connection.')
@@ -250,16 +250,20 @@ def file_server():
         clnt_sock, clnt_addr = serv_sock.accept()
     except socket.error as e:
         print('Failed to accept new connection:', e)
+        add_line_to_output('Failed to accept new connection: %s' % e)
         sys.exit(3)
     else:
         print('New connection from:', clnt_sock)
+        add_line_to_output('New connection from: %s' % clnt_sock)
 
     try:
         file_name_recv = clnt_sock.recv(FILE_BUFFER_SIZE).decode()
+        add_line_to_output("File to receive %s " % str(file_name_recv))
         if file_name_recv[:5] == "File:":
             size_buff = readn(clnt_sock, 4)
             if size_buff == '':
                 print('Failed to receive file size.', file=sys.stderr)
+                add_line_to_output('Failed to receive file size. %s' % sys.stderr)
                 clnt_sock.close()
                 serv_sock.close()
                 sys.exit(3)
@@ -267,10 +271,19 @@ def file_server():
             size_unpacked = struct.unpack('!I', size_buff)
             file_size = size_unpacked[0]
             print('Will receive file of size', file_size, 'bytes.')
+            add_line_to_output('Will receive file of size %s bytes.' % file_size)
 
             hash_algo = hashlib.sha256()
 
-            filename = random_filename()
+            #filename = random_filename()
+
+            filename_full = file_name_recv.split('/')
+            print(file_name_recv)
+            print(filename_full)
+            filename = filename_full[-1]
+            add_line_to_output(filename)
+            print(filename)
+
             try:
                 with open(filename, 'wb') as file_handle:
                     while file_size > 0:
@@ -278,35 +291,47 @@ def file_server():
                         print(len(buffer), 'bytes received.')
                         if buffer == '':
                             print('End of transmission.')
+                            add_line_to_output('End of transmission.')
                             break
                         hash_algo.update(buffer)
                         file_handle.write(buffer)
                         file_size -= len(buffer)
                     if file_size > 0:
                         print('Failed to receive file,', file_size, 'more bytes to go.')
+                        add_line_to_output('Failed to receive file, %s more bytes to go.' % file_size)
             except socket.error as e:
                 print('Failed to receive data:', e, file=sys.stderr)
+                add_line_to_output('Failed to receive data: {0} {1}'.format(e, sys.stderr))
                 clnt_sock.close()
                 serv_sock.close()
-                sys.exit(3)
+                #sys.exit(3)
             except IOError as e:
                 print('Failed to write file:', e, file=sys.stderr)
+                add_line_to_output('Failed to write data: {0} {1}'.format(e, sys.stderr))
                 clnt_sock.close()
                 serv_sock.close()
-                sys.exit(3)
+                #sys.exit(3)
             else:
                 print('File transmission completed.')
+                add_line_to_output('File transmission completed.')
 
             clnt_sock.shutdown(socket.SHUT_RD)
             clnt_sock.close()
             serv_sock.close()
             print('Server shutdown.')
+            add_line_to_output('Server shutdown.')
             print('SHA256 digest:', hash_algo.hexdigest())
+            add_line_to_output('SHA256 digest: %s ' % hash_algo.hexdigest())
     except socket.error as e:
         print("Failed to receive:", e)
+        add_line_to_output("Failed to receive: %s" % e)
         clnt_sock.close()
     else:
         print("Client not sending file")
+        add_line_to_output("Client not sending file, restarting file server")
+        serv_sock.close()
+        clnt_sock.close()
+        file_server()
 
 
 def start_server():

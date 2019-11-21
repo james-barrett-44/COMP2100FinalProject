@@ -14,6 +14,9 @@ import socket
 from multiprocessing import Process, Queue
 import time
 import threading
+import tkinter
+from tkinter import *
+import pickle
 
 def add_peer_manually():
     global custom_peer_e
@@ -23,6 +26,7 @@ def add_peer_manually():
     s = socket.socket()
     try:
         s.connect((custom_peer, 1234))
+        s.send(b'00')
         add_line_to_output("Connection open to %s on port 1234" % custom_peer)
         peer_list.insert(tkinter.END, custom_peer)
         #peer_ip.set("Peer IP: %s " % custom_peer)
@@ -116,7 +120,7 @@ def check_subnet_for_peers(port=1234, timeout=3.0):
     for idx, p in enumerate(processes):
         p.join()
 
-    peer_list.delete(0, END)
+    #peer_list.delete(0, END)
     #return found_ips
     if not found_ips:
         peer_list.insert(tkinter.END,"No peers found")
@@ -172,8 +176,32 @@ def scan_dir_for_files():
                 add_line_to_output("Added file: '%s' to my file list" %file.name)
     return basepath
 
-import tkinter
-from tkinter import *
+def send_myfile_list():
+    server_addr, server_port = peer_ip.get()[9:-1], '1234'
+    add_line_to_output('Connecting to peer.')
+    conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print(server_addr)
+    try:
+        conn.connect((server_addr, int(server_port)))
+    except socket.error as e:
+        add_line_to_output('Failed to connect to peer: {0}'.format(e))
+
+    else:
+        add_line_to_output('Connection established.')
+
+    l = myfiles_list.get(0, END)
+    l = list(l)
+    print(l)
+    l_bytes = pickle.dumps(l)
+    print(l_bytes)
+    print(type(l_bytes))
+    conn.sendall(l_bytes)
+    add_line_to_output('Sending my file list to peer.')
+
+
+
+
+
 def send_file_to_peer():
     global source_file_name
     source_file = source_file_name.get()
@@ -182,7 +210,7 @@ def send_file_to_peer():
     add_line_to_output('Sending file {0} to {1}:{2}'.format(source_file, server_addr, server_port))
     add_line_to_output('Source file size: {0} bytes.'.format(file_size))
 
-    add_line_to_output('Connecting to remote server.')
+    add_line_to_output('Connecting to peer.')
     conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         conn.connect((server_addr, int(server_port)))
@@ -193,11 +221,14 @@ def send_file_to_peer():
         add_line_to_output('Connection established.')
 
     source_file_bytes = "File:{0}".format(source_file).encode()
+    source_file_bytes = "File:{0}".format(source_file)
+
+    source_file_pickle = pickle.dumps(source_file_bytes)
     add_line_to_output(str(source_file_bytes))
+    print(source_file_pickle)
+    conn.sendall(source_file_pickle)
 
-    conn.sendall(source_file_bytes)
-
-    add_line_to_output('Sending file size to remote server.')
+    add_line_to_output('Sending file size to peer.')
     buffer = b''
     buffer = struct.pack('!I', file_size)
     add_line_to_output('File size packed into binary format: {0}'.format(buffer))
@@ -229,9 +260,23 @@ def send_file_to_peer():
     add_line_to_output('SHA256 digest: {0}'.format(hash_algo.hexdigest()))
 
 
-def get_list_item():
-    l = output_list.get(output_list.curselection())
-    print(l)
+def print_file_list():
+    l = myfiles_list.get(0, END)
+    l = list(l)
+    n = 0
+    for i in l:
+        n = n + 1
+        print(n, i)
+        peer_list.insert(n, i)
+
+def insert_peer_files(peer_files):
+    n = 0
+    for i in peer_files:
+        print(n, i)
+        peer_list.insert(n, i)
+        n = n + 1
+
+
 
 def select_file_in_list():
     if myfiles_list.index("end") == 0:
@@ -251,7 +296,7 @@ def file_server():
     try:
         serv_sock.bind((get_ip(), 1234))
         #serv_sock.bind((str(ip_e.get()), 1234))
-        serv_sock.listen(99)
+        serv_sock.listen(1)
     except socket.error as e:
         print('Failed to launch server:', e)
         add_line_to_output("Failed to launch server: %s" % e)
@@ -268,11 +313,14 @@ def file_server():
         sys.exit(3)
     else:
         print('New connection from:', clnt_sock)
-        add_line_to_output('New connection from: %s' % clnt_sock)
         add_line_to_output('New connection from: %s on port: %s' % clnt_addr)
 
     try:
-        file_name_recv = clnt_sock.recv(FILE_BUFFER_SIZE).decode()
+        file_name_recv = clnt_sock.recv(FILE_BUFFER_SIZE)
+        try:
+            file_name_recv = pickle.loads(file_name_recv)
+        except:
+            add_line_to_output("Peer connected manually or with network scan")
         if file_name_recv[:5] == "File:":
             size_buff = readn(clnt_sock, 4)
             if size_buff == '':
@@ -330,6 +378,10 @@ def file_server():
             add_line_to_output('SHA256 digest: %s ' % hash_algo.hexdigest())
             print('Server shutdown.')
             add_line_to_output('Server shutdown.')
+        elif isinstance(file_name_recv, list):
+            print(file_name_recv)
+            insert_peer_files(file_name_recv)
+
     except socket.error as e:
         print("Failed to receive:", e)
         add_line_to_output("Failed to receive: %s" % e)
@@ -353,7 +405,7 @@ if __name__ == '__main__':
     FILE_BUFFER_SIZE = 524288
 
     window = tkinter.Tk()
-    window.title("The P2P Mayflower")
+    window.title("The P2P Mayflower v2.5 COPY")
     window.geometry("910x620")
 
     # Row 0
@@ -415,7 +467,9 @@ if __name__ == '__main__':
     output_list.grid(row=5, column=0, columnspan=5, sticky="W")
 
     # Row 6
-    tkinter.Button(window, text="Print output to terminal", command=get_list_item).grid(row=6, column=0)
+    #tkinter.Button(window, text="Print output to terminal", command=get_list_item).grid(row=6, column=0)
+    #tkinter.Button(window, text="Print file list", command=print_file_list).grid(row=6, column=0)
+    tkinter.Button(window, text="Send file list", command=send_myfile_list).grid(row=6, column=0)
     tkinter.Button(window, text="Clear output", command=clear_output).grid(row=6, column=1)
     tkinter.Button(window, text="Send file!", command=send_file_to_peer).grid(row=6, column=3)
     tkinter.Button(window, text="(Re)start Server", command=start_server).grid(row=6, column=6, sticky="E")
