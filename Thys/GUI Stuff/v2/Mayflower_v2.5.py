@@ -176,6 +176,25 @@ def scan_dir_for_files():
                 add_line_to_output("Added file: '%s' to my file list" %file.name)
     return basepath
 
+
+def aks_peer_file_list():
+    server_addr, server_port = peer_ip.get()[9:-1], '1234'
+    add_line_to_output('Connecting to peer.')
+    conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print(server_addr)
+    try:
+        conn.connect((server_addr, int(server_port)))
+    except socket.error as e:
+        add_line_to_output('Failed to connect to peer: {0}'.format(e))
+
+    else:
+        add_line_to_output('Connection established.')
+
+    ask = "List:".encode()
+    conn.sendall(ask)
+    add_line_to_output("Asking peer file list")
+
+
 def send_myfile_list():
     server_addr, server_port = peer_ip.get()[9:-1], '1234'
     add_line_to_output('Connecting to peer.')
@@ -269,13 +288,13 @@ def print_file_list():
         print(n, i)
         peer_list.insert(n, i)
 
+
 def insert_peer_files(peer_files):
     n = 0
     for i in peer_files:
         print(n, i)
         peerfiles_list.insert(n, i)
         n = n + 1
-
 
 
 def select_file_in_list():
@@ -381,6 +400,14 @@ def file_server():
         elif isinstance(file_name_recv, list):
             print(file_name_recv)
             insert_peer_files(file_name_recv)
+        elif file_name_recv[:5] == "List:":
+            list_to_send = myfiles_list.get(0, END)
+            list_to_send = list(list_to_send)
+            print(list_to_send)
+            l_bytes = pickle.dumps(list_to_send)
+            print(l_bytes)
+            print(type(l_bytes))
+            clnt_sock.sendall(l_bytes)
 
     except socket.error as e:
         print("Failed to receive:", e)
@@ -469,7 +496,8 @@ if __name__ == '__main__':
     # Row 6
     #tkinter.Button(window, text="Print output to terminal", command=get_list_item).grid(row=6, column=0)
     #tkinter.Button(window, text="Print file list", command=print_file_list).grid(row=6, column=0)
-    tkinter.Button(window, text="Send file list", command=send_myfile_list).grid(row=6, column=0)
+    tkinter.Button(window, text="Send file list", command=send_myfile_list).grid(row=6, column=0, sticky='w')
+    tkinter.Button(window, text="ASk", command=aks_peer_file_list).grid(row=6, column=0, sticky='e')
     tkinter.Button(window, text="Clear output", command=clear_output).grid(row=6, column=1)
     tkinter.Button(window, text="Send file!", command=send_file_to_peer).grid(row=6, column=3)
     tkinter.Button(window, text="(Re)start Server", command=start_server).grid(row=6, column=6, sticky="E")
