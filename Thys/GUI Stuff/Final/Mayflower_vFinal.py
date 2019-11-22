@@ -165,7 +165,8 @@ def scan_dir_for_files():
         for file in entries:
             if file.is_file():
                 myfiles_list.insert(tkinter.END,file.name)
-                output_label.set("Output | Path: %s" % basepath)
+                #output_label.set("Output | Path: %s" % basepath)
+                folder_label.set(basepath)
                 #ol.update_idletasks()
                 add_line_to_output("Added file: '%s' to my file list" %file.name)
     return basepath
@@ -438,8 +439,8 @@ if __name__ == '__main__':
 
     window = tkinter.Tk()
     window.title("The P2P Mayflower vFinal")
-    window.geometry("910x620")
-    window.resizable(0, 0)
+    window.geometry("940x620")
+    #window.resizable(0, 0)
 
     menubar = Menu(window)
     servermenu = Menu(menubar, tearoff=0)
@@ -455,52 +456,65 @@ if __name__ == '__main__':
 
     window.config(menu=menubar)
 
-    # Row 10
-    entryText = tkinter.StringVar()
-    tkinter.Label(window, text="My IP address:").grid(row=0, column=0, sticky="W")
-    tkinter.Button(window, text="Get IP", command=get_ip).grid(row=0, column=3, sticky="W")
+    entryText = tkinter.StringVar()  # is this used?
 
+    # Row 0
+
+
+    # Row 10
+    tkinter.Label(window, text=" ").grid(row=10, column=41)  # white space between lists
+    tkinter.Label(window, text=" ").grid(row=10, column=70)  # white space between lists
+    tkinter.Label(window, text="File:").grid(row=10, column=10, sticky="W")
+    file_name_to_send = tkinter.StringVar()
+    source_file_name = tkinter.Entry(window, textvariable=file_name_to_send, width=100)
+    source_file_name.grid(row=10, column=20, columnspan=30, sticky="W")
+    tkinter.Button(window, text="Browse file", command=select_file).grid(row=10, column=50, sticky="EW")
+
+    tkinter.Label(window, text="IP:").grid(row=10, column=80, sticky="W")
     custom_peer = tkinter.StringVar()
-    custom_peer_e = tkinter.Entry(window, textvariable=custom_peer, width=20)
-    custom_peer_e.grid(row=0, column=3, sticky="E")
-    tkinter.Button(window, text="Add peer manually", command=add_peer_manually).grid(row=0, column=6, sticky="W")
+    custom_peer_e = tkinter.Entry(window, textvariable=custom_peer, width=15)
+    custom_peer_e.grid(row=10, column=90, sticky="E")
+
+    # Row 20
+    tkinter.Label(window, text="Folder:").grid(row=20, column=10, sticky="W", pady=5)
+    tkinter.Button(window, text="Browse folder", command=scan_dir_for_files).grid(row=20, column=50, ipadx=1, sticky="W")
+
+    folder_label = tkinter.StringVar()
+    folder_label.set("file_path")
+    tkinter.Label(window, textvariable=folder_label).grid(row=20, column=20, sticky="W")
+    tkinter.Button(window, text="Add peer manually", command=add_peer_manually).grid(row=20, column=80, columnspan=11, sticky="EW")
+
+    # Row 30
+    tkinter.Label(window, text="My file list:").grid(row=30, column=10, columnspan=11, sticky="W")
+    tkinter.Label(window, text="Peer file list:").grid(row=30, column=45, sticky="W")
+
+    peer_ip = tkinter.StringVar()
+    peer_ip.set("Peer IP:")
+    tkinter.Label(window, textvariable=peer_ip).grid(row=30, column=50, sticky="E")
+    tkinter.Label(window, text="Peer list:").grid(row=30, column=80, columnspan=11, sticky="W")
+    tkinter.Button(window, text="Scan", command=check_subnet_for_peers).grid(row=30, column=90, sticky="E")
+
+    # Row 40
+    myfiles_list = tkinter.Listbox(window, height=15, width=60)
+    myfiles_list.grid(row=40, column=10, columnspan=40, sticky="W")
+
+    peerfiles_list = tkinter.Listbox(window, height=15, width=60)
+    peerfiles_list.grid(row=40, column=45, columnspan=11, sticky="W")
+
+    peer_list = tkinter.Listbox(window)
+    peer_list.grid(row=40, column=80, columnspan=11, sticky="NSEW")
+
+    # Row 50
+    tkinter.Button(window, text="Select file in my file list", command=select_file_in_list).grid(row=50, column=10, columnspan=11, sticky="W")
+    tkinter.Button(window, text="Send file!", command=send_file_to_peer).grid(row=50, column=44, sticky="W")
+    """   
 
     local_ip = tkinter.StringVar()
     ip_e = tkinter.Entry(window, textvariable=local_ip, width=35)
     ip_e.grid(row=0, column=1, sticky="E")
-
     #tkinter.Entry(window, width=40).grid(row=0, column=1, sticky="E")
-    tkinter.Label(window, text=" ").grid(row=0, column=2) #white space between lists
-    tkinter.Label(window, text=" ").grid(row=0, column=5) #white space between lists
-
     # Row 1
-    tkinter.Label(window, text="File to send:").grid(row=1, column=0, sticky="W")
-    file_name_to_send = tkinter.StringVar()
-    source_file_name = tkinter.Entry(window, textvariable=file_name_to_send, width=35)
-    source_file_name.grid(row=1, column=1, sticky="E")
-    tkinter.Button(window, text="Choose file", command=select_file).grid(row=1, column=3, sticky="W")
     tkinter.Button(window, text="Select peer", command=select_peer).grid(row=1, column=3, sticky="E")
-    tkinter.Button(window, text="Scan network for peers", command=check_subnet_for_peers).grid(row=1, column=6, sticky="W")
-
-    # Row 2
-    tkinter.Label(window, text="My file list:").grid(row=2, column=0, sticky="W")
-    tkinter.Button(window, text="Select file", command=select_file_in_list).grid(row=2, column=1, sticky="W")
-    tkinter.Button(window, text="Browse folder", command=scan_dir_for_files).grid(row=2, column=1, sticky="E")
-    tkinter.Label(window, text="Peer file list:").grid(row=2, column=3, sticky="W")
-    peer_ip = tkinter.StringVar()
-    peer_ip.set("Peer IP:")
-    tkinter.Label(window, textvariable=peer_ip).grid(row=2, column=3, sticky="E")
-    tkinter.Label(window, text="Peer list:").grid(row=2, column=6, sticky="W")
-
-    # Row 3
-    myfiles_list = tkinter.Listbox(window, height=15, width=60)
-    myfiles_list.grid(row=3, column=0, columnspan=2, sticky="W")
-
-    peerfiles_list = tkinter.Listbox(window, height=15, width=60)
-    peerfiles_list.grid(row=3, column=3, sticky="W")
-
-    peer_list = tkinter.Listbox(window, height=15, width=25)
-    peer_list.grid(row=3, column=6, columnspan=2, sticky="W")
 
     # Row 4
     output_label = tkinter.StringVar()
@@ -519,7 +533,7 @@ if __name__ == '__main__':
     tkinter.Button(window, text="Send file list", command=send_myfile_list).grid(row=6, column=0, sticky='w')
     tkinter.Button(window, text="ASk", command=ask_peer_file_list).grid(row=6, column=0, sticky='e')
     tkinter.Button(window, text="Clear output", command=clear_output).grid(row=6, column=1)
-    tkinter.Button(window, text="Send file!", command=send_file_to_peer).grid(row=6, column=3)
+    
     tkinter.Button(window, text="(Re)start Server", command=start_server).grid(row=6, column=6, sticky="E")
-
+    """
     window.mainloop()
