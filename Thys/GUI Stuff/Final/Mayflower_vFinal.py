@@ -1,13 +1,6 @@
-import os
 from tkinter.filedialog import askdirectory,askopenfilename
-from threading import Thread
-import tkinter
-from tkinter import *
 import os
-import sys
 import struct
-import getopt
-import socket
 import hashlib
 from datetime import datetime
 import socket
@@ -49,7 +42,7 @@ def select_peer():
         selected_peer_ip = peer_list.get(peer_list.curselection())
         peer_ip.set("Peer IP: %s " % selected_peer_ip)
         add_line_to_output("Selected peer: " + str(selected_peer_ip))
-        add_line_to_output(peer_ip.get()[9:])
+        #add_line_to_output(peer_ip.get()[9:])
     else:
         add_line_to_output("No peer IP selected or not available")
 
@@ -131,7 +124,6 @@ def check_subnet_for_peers(port=1234, timeout=2.0):
         p.join()
 
     peer_list.delete(0, END)
-    #return found_ips
     if not found_ips:
         peer_list.insert(tkinter.END,"No peers found")
         add_line_to_output("No peers found with network scan")
@@ -141,6 +133,7 @@ def check_subnet_for_peers(port=1234, timeout=2.0):
 
 def clear_output():
     output_list.delete(0, END)
+    bytes_list.delete(0, END)
 
 def add_line_to_output(msg):
     t = datetime.now().strftime('%H:%M:%S')
@@ -148,26 +141,26 @@ def add_line_to_output(msg):
     output_list.see(END)
     output_list.update_idletasks()
 
+def add_line_to_bytes_list(msg):
+    bytes_list.insert(tkinter.END, msg)
+    bytes_list.see(END)
+    bytes_list.update_idletasks()
+
 def select_file():
     file_name = askopenfilename()
-    #tkinter.Label(window, text=file).grid(row=1, column=1)
     file_name_to_send.set(file_name)
     add_line_to_output("Selected file: %s as file to send" % file_name)
     return file_name
-    #file_label.pack()
 
 
 def scan_dir_for_files():
     basepath = askdirectory()
-    #global output_label
     myfiles_list.delete(0, END)
     with os.scandir(basepath) as entries:
         for file in entries:
             if file.is_file():
                 myfiles_list.insert(tkinter.END,file.name)
-                #output_label.set("Output | Path: %s" % basepath)
                 folder_label.set(basepath)
-                #ol.update_idletasks()
                 add_line_to_output("Added file: '%s' to my file list" %file.name)
     return basepath
 
@@ -198,6 +191,71 @@ def ask_peer_file_list():
     peer_file_list_recv = pickle.loads(peer_file_list_recv)
     print("Second recv: %s " % peer_file_list_recv)
     insert_peer_files(peer_file_list_recv)
+
+
+
+def download_peer_file():
+    server_addr, server_port = peer_ip.get()[9:-1], '1234'
+    add_line_to_output('Connecting to peer.')
+    conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print(server_addr)
+    try:
+        conn.connect((server_addr, int(server_port)))
+    except socket.error as e:
+        add_line_to_output('Failed to connect to peer: {0}'.format(e))
+
+    else:
+        add_line_to_output('Connection established for downloading.')
+
+    download_file_name = "Download:{0}".format(peerfiles_list.get(peerfiles_list.curselection()))
+    download_file_name = pickle.dumps(download_file_name)
+    print(download_file_name)
+    conn.sendall(download_file_name)
+    size_buff = readn(conn, 4)
+    if size_buff == '':
+        print('Failed to download file size.', file=sys.stderr)
+        add_line_to_output('Failed to download file size. %s' % sys.stderr)
+        conn.close()
+
+    size_unpacked = struct.unpack('!I', size_buff)
+    file_size = size_unpacked[0]
+    print('Will download file of size', file_size, 'bytes.')
+    add_line_to_output('Will download file of size %s bytes.' % file_size)
+
+    hash_algo = hashlib.sha256()
+    filename = peerfiles_list.get((peerfiles_list.curselection()))
+    add_line_to_output("File to download: %s " % filename)
+
+    try:
+        with open(filename, 'wb') as file_handle:
+            while file_size > 0:
+                buffer = conn.recv(FILE_BUFFER_SIZE)
+                print(len(buffer), 'bytes received.')
+                add_line_to_bytes_list(str(len(buffer))+' bytes received.')
+                if buffer == '':
+                    print('End of download.')
+                    add_line_to_output('End of download.')
+                    break
+                hash_algo.update(buffer)
+                file_handle.write(buffer)
+                file_size -= len(buffer)
+            if file_size > 0:
+                print('Failed to download file,', file_size, 'more bytes to go.')
+                add_line_to_output('Failed to download file, %s more bytes to go.' % file_size)
+    except socket.error as e:
+        print('Failed to receive data:', e, file=sys.stderr)
+        add_line_to_output('Failed to receive data: {0} {1}'.format(e, sys.stderr))
+        conn.close()
+
+    except IOError as e:
+        print('Failed to write file:', e, file=sys.stderr)
+        add_line_to_output('Failed to write data: {0} {1}'.format(e, sys.stderr))
+        conn.close()
+
+    else:
+        print('File download completed.')
+        add_line_to_output('SHA256 digest: %s ' % hash_algo.hexdigest())
+        add_line_to_output('File download completed.')
 
 
 def send_myfile_list():
@@ -304,28 +362,25 @@ def select_file_in_list():
         add_line_to_output("No file(s) available")
     elif myfiles_list.curselection():
         list_file = myfiles_list.get(myfiles_list.curselection())
-        file_name_to_send.set(str(output_label.get()[15:])+"/"+list_file)
+        file_name_to_send.set(str(folder_label.get())+list_file)
         add_line_to_output("Selected file: %s as file to send" % list_file)
     else:
         add_line_to_output("No file selected")
 
-
 def file_server():
     print('Launching bigfile server.')
-    add_line_to_output("Launching bigfile server.")
     serv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         serv_sock.bind((get_ip(), 1234))
-        #serv_sock.bind((str(ip_e.get()), 1234))
         serv_sock.listen(1)
     except socket.error as e:
         print('Failed to launch server:', e)
         add_line_to_output("Failed to launch server: %s" % e)
         serv_sock.close()
-        #sys.exit(3)
+
     else:
         print('Server launched, waiting for new connection.')
-        add_line_to_output("Server launched, waiting for new connection.")
+        add_line_to_output("Ready to receive files, waiting for new connection.")
 
     try:
         clnt_sock, clnt_addr = serv_sock.accept()
@@ -369,6 +424,7 @@ def file_server():
                     while file_size > 0:
                         buffer = clnt_sock.recv(FILE_BUFFER_SIZE)
                         print(len(buffer), 'bytes received.')
+                        add_line_to_bytes_list(str(len(buffer))+' bytes received.')
                         if buffer == '':
                             print('End of transmission.')
                             add_line_to_output('End of transmission.')
@@ -384,13 +440,13 @@ def file_server():
                 add_line_to_output('Failed to receive data: {0} {1}'.format(e, sys.stderr))
                 clnt_sock.close()
                 serv_sock.close()
-                #sys.exit(3)
+
             except IOError as e:
                 print('Failed to write file:', e, file=sys.stderr)
                 add_line_to_output('Failed to write data: {0} {1}'.format(e, sys.stderr))
                 clnt_sock.close()
                 serv_sock.close()
-                #sys.exit(3)
+
             else:
                 print('File transmission completed.')
                 add_line_to_output('File transmission completed.')
@@ -401,7 +457,7 @@ def file_server():
             print('SHA256 digest:', hash_algo.hexdigest())
             add_line_to_output('SHA256 digest: %s ' % hash_algo.hexdigest())
             print('Server shutdown.')
-            add_line_to_output('Server shutdown.')
+            add_line_to_output('Closing connection')
         elif file_name_recv[:5] == "List:":
             list_to_send = myfiles_list.get(0, END)
             list_to_send = list(list_to_send)
@@ -410,6 +466,44 @@ def file_server():
             print("Pickle: %s" % list_to_send_pickle)
             print("Pickle type: %s" % type(list_to_send_pickle))
             clnt_sock.sendall(list_to_send_pickle)
+        elif file_name_recv[:9] == "Download:":
+            print((file_name_recv[9:]))
+            add_line_to_output("Peer request file"+file_name_recv[9:])
+            source_file = str(folder_label.get())+"/"+file_name_recv[9:]
+            file_size = os.path.getsize(source_file)
+            add_line_to_output('Sending file {0}'.format(source_file))
+            add_line_to_output('Source file size: {0} bytes.'.format(file_size))
+            add_line_to_output('Sending file size to peer.')
+            buffer = b''
+            buffer = struct.pack('!I', file_size)
+            add_line_to_output('File size packed into binary format: {0}'.format(buffer))
+
+            try:
+                clnt_sock.sendall(buffer)
+            except socket.error as e:
+                add_line_to_output('Failed to send file size:{0}'.format(e))
+
+            else:
+                add_line_to_output('File size sent.')
+
+            hash_algo = hashlib.sha256()
+
+            add_line_to_output('Start to send file content.')
+            try:
+                with open(source_file, 'rb') as file_handle:
+                    buffer = file_handle.read(FILE_BUFFER_SIZE)
+                    while len(buffer) > 0:
+                        clnt_sock.sendall(buffer)
+                        hash_algo.update(buffer)
+                        buffer = file_handle.read(FILE_BUFFER_SIZE)
+            except IOError as er:
+                add_line_to_output('Failed to open source file {0} : {1} {2}'.format(source_file, er, sys.stderr))
+
+            clnt_sock.shutdown(socket.SHUT_WR)
+            clnt_sock.close()
+            add_line_to_output('File sent, connection closed.')
+            add_line_to_output('SHA256 digest: {0}'.format(hash_algo.hexdigest()))
+
         elif isinstance(file_name_recv, list):
             print(file_name_recv)
             insert_peer_files(file_name_recv)
@@ -421,7 +515,7 @@ def file_server():
         clnt_sock.close()
     else:
         print("Client not sending file")
-        add_line_to_output("Client not sending file, restarting file server")
+        add_line_to_output("Restarting server")
         serv_sock.close()
         clnt_sock.close()
         file_server()
@@ -438,14 +532,16 @@ if __name__ == '__main__':
     FILE_BUFFER_SIZE = 524288
 
     window = tkinter.Tk()
-    window.title("The P2P Mayflower vFinal")
-    window.geometry("940x620")
-    #window.resizable(0, 0)
+    window.title("The P2P Mayflower")
+    window.geometry("932x623")
+    window.resizable(0, 0)
 
     menubar = Menu(window)
     servermenu = Menu(menubar, tearoff=0)
-    servermenu.add_command(label="Start server", command=start_server)
-    servermenu.add_command(label="(Re)Start server", command=start_server)
+    servermenu.add_command(label="Start Server", command=start_server)
+    servermenu.add_command(label="(Re)Start Server", command=start_server)
+    servermenu.add_separator()
+    servermenu.add_command(label="Clear Output", command=clear_output)
     servermenu.add_separator()
     servermenu.add_command(label="Quit Mayflower", command=window.quit)
     menubar.add_cascade(label="Server", menu=servermenu)
@@ -458,30 +554,34 @@ if __name__ == '__main__':
 
     entryText = tkinter.StringVar()  # is this used?
 
-    # Row 0
+    # Old GUI stuff for IP
+    local_ip = tkinter.StringVar()
+    ip_e = tkinter.Entry(window, textvariable=local_ip)
 
 
     # Row 10
-    tkinter.Label(window, text=" ").grid(row=10, column=41)  # white space between lists
+    tkinter.Label(window, text=" ").grid(row=10, column=9)  # white space between lists
+    tkinter.Label(window, text=" ").grid(row=10, column=40)  # white space between lists
     tkinter.Label(window, text=" ").grid(row=10, column=70)  # white space between lists
+
     tkinter.Label(window, text="File:").grid(row=10, column=10, sticky="W")
     file_name_to_send = tkinter.StringVar()
     source_file_name = tkinter.Entry(window, textvariable=file_name_to_send, width=100)
     source_file_name.grid(row=10, column=20, columnspan=30, sticky="W")
     tkinter.Button(window, text="Browse file", command=select_file).grid(row=10, column=50, sticky="EW")
 
-    tkinter.Label(window, text="IP:").grid(row=10, column=80, sticky="W")
+    tkinter.Label(window, text="Add peer IP:").grid(row=10, column=80, sticky="W")
     custom_peer = tkinter.StringVar()
     custom_peer_e = tkinter.Entry(window, textvariable=custom_peer, width=15)
     custom_peer_e.grid(row=10, column=90, sticky="E")
 
     # Row 20
     tkinter.Label(window, text="Folder:").grid(row=20, column=10, sticky="W", pady=5)
-    tkinter.Button(window, text="Browse folder", command=scan_dir_for_files).grid(row=20, column=50, ipadx=1, sticky="W")
+    tkinter.Button(window, text="Browse folder", command=scan_dir_for_files).grid(row=20, column=50, ipadx=1, sticky="EW")
 
     folder_label = tkinter.StringVar()
     folder_label.set("file_path")
-    tkinter.Label(window, textvariable=folder_label).grid(row=20, column=20, sticky="W")
+    tkinter.Label(window, textvariable=folder_label).grid(row=20, column=20, columnspan=30, sticky="W")
     tkinter.Button(window, text="Add peer manually", command=add_peer_manually).grid(row=20, column=80, columnspan=11, sticky="EW")
 
     # Row 30
@@ -490,7 +590,7 @@ if __name__ == '__main__':
 
     peer_ip = tkinter.StringVar()
     peer_ip.set("Peer IP:")
-    tkinter.Label(window, textvariable=peer_ip).grid(row=30, column=50, sticky="E")
+    tkinter.Label(window, textvariable=peer_ip).grid(row=30, column=45, columnspan=6, sticky="E")
     tkinter.Label(window, text="Peer list:").grid(row=30, column=80, columnspan=11, sticky="W")
     tkinter.Button(window, text="Scan", command=check_subnet_for_peers).grid(row=30, column=90, sticky="E")
 
@@ -506,34 +606,22 @@ if __name__ == '__main__':
 
     # Row 50
     tkinter.Button(window, text="Select file in my file list", command=select_file_in_list).grid(row=50, column=10, columnspan=11, sticky="W")
-    tkinter.Button(window, text="Send file!", command=send_file_to_peer).grid(row=50, column=44, sticky="W")
-    """   
+    tkinter.Button(window, text="Send file!", command=send_file_to_peer).grid(row=50, column=42, sticky="E")
 
-    local_ip = tkinter.StringVar()
-    ip_e = tkinter.Entry(window, textvariable=local_ip, width=35)
-    ip_e.grid(row=0, column=1, sticky="E")
-    #tkinter.Entry(window, width=40).grid(row=0, column=1, sticky="E")
-    # Row 1
-    tkinter.Button(window, text="Select peer", command=select_peer).grid(row=1, column=3, sticky="E")
+    tkinter.Button(window, text="Receive peer file list", command=ask_peer_file_list).grid(row=50, column=45, sticky='W')
+    tkinter.Button(window, text="Download file!", command=download_peer_file).grid(row=50, column=50, sticky="W")
 
-    # Row 4
-    output_label = tkinter.StringVar()
-    output_label.set("Output | Path:")
-    tkinter.Label(window, textvariable=output_label).grid(row=4, column=0, columnspan=6, sticky="W")
+    tkinter.Button(window, text="Select peer", command=select_peer).grid(row=50, column=80, columnspan=11, sticky="E")
 
-    # Row 5, yscrollcommand=yscrollbar.set
-    yscrollbar = tkinter.Scrollbar(window)
-    xscrollbar = tkinter.Scrollbar(window, orient=HORIZONTAL)
+    # Row 59
+    tkinter.Label(window, text="Output").grid(row=59, column=10, sticky="W")
+    tkinter.Label(window, text="Receiving bytes:").grid(row=59, column=80, columnspan=11, sticky="W")
+
+    # Row 60
     output_list = tkinter.Listbox(window, height=15, width=123)
-    output_list.grid(row=5, column=0, columnspan=5, sticky="W")
+    output_list.grid(row=60, column=10, columnspan=51, sticky="W")
 
-    # Row 6
-    #tkinter.Button(window, text="Print output to terminal", command=get_list_item).grid(row=6, column=0)
-    #tkinter.Button(window, text="Print file list", command=print_file_list).grid(row=6, column=0)
-    tkinter.Button(window, text="Send file list", command=send_myfile_list).grid(row=6, column=0, sticky='w')
-    tkinter.Button(window, text="ASk", command=ask_peer_file_list).grid(row=6, column=0, sticky='e')
-    tkinter.Button(window, text="Clear output", command=clear_output).grid(row=6, column=1)
-    
-    tkinter.Button(window, text="(Re)start Server", command=start_server).grid(row=6, column=6, sticky="E")
-    """
+    bytes_list = tkinter.Listbox(window)
+    bytes_list.grid(row=60, column=80, columnspan=11, sticky="NSEW")
+
     window.mainloop()
