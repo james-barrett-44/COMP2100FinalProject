@@ -13,21 +13,6 @@ import socket
 from multiprocessing import Process, Queue
 import time
 
-def add_peer_manually():
-    global custom_peer_e
-    custom_peer = custom_peer_e.get()
-    add_line_to_output("Connecting to %s" % custom_peer)
-    s = socket.socket()
-    try:
-        s.connect((custom_peer, 1234))
-        add_line_to_output("Connection open to %s on port 1234" % custom_peer)
-        output_list.insert(tkinter.END, custom_peer)
-        peer_list(tkinter.END, custom_peer)
-        peer_ip.set("Peer IP: s% " % custom_peer)
-
-    except socket.error as e:
-        add_line_to_output("Connection to %s on port 1234 failed: %s" % (custom_peer, e))
-
 def check_peer(address, port, queue):
     """
     Check an IP and port for it to be open, store result in queue.
@@ -72,8 +57,10 @@ def check_subnet_for_peers(port=1234, timeout=3.0):
     processes = []
     for i in range(1, 255):
         ip = subnetstr + '.' + str(i)
-        #print("Checking ip: " + str(ip))
-        #add_line_to_output(str(ip))
+        print("Checking ip: " + str(ip))
+        #output_list.insert(tkinter.END, str(ip))
+        add_line_to_output(str(ip))
+        #output_list.update_idletasks()
         p = Process(target=check_peer, args=[ip, port, q])
         processes.append(p)
         p.start()
@@ -112,34 +99,18 @@ def select_file():
     #file_label.pack()
 
 def scan_dir():
-    #global  myfiles_list
     basepath = askdirectory()
     for dir in os.listdir(basepath):
         if os.path.isdir(os.path.join(basepath, dir)):
-            myfiles_list.insert(tkinter.END,"Folder: %s" % dir)
-            #myfiles_list.insert(tkinter.END,dir)
-            #tkinter.Label(window, text=f"Folder: {dir}").pack()
+            tkinter.Label(window, text=f"Folder: {dir}").pack()
             #print(f"Directory: {dir}")
 
     with os.scandir(basepath) as entries:
         for file in entries:
             if file.is_file():
-                #tkinter.Label(window, text=f"File: {file.name}").pack()
-                myfiles_list.insert(tkinter.END,"File: %s" % file.name)
-                #myfiles_list.insert(tkinter.END,file.name)
+                tkinter.Label(window, text=f"File: {file.name}").pack()
                 #print(f"File: {file.name}")
                 #file_list.append(file.name)
-
-def scan_dir_for_files():
-    basepath = askdirectory()
-
-    with os.scandir(basepath) as entries:
-        for file in entries:
-            if file.is_file():
-                myfiles_list.insert(tkinter.END,"File: %s" % file.name)
-                add_line_to_output("Added file: '%s' to my file list" %file.name)
-
-
 
 
 def send_file_to_peer():
@@ -210,17 +181,12 @@ entryText = tkinter.StringVar()
 tkinter.Label(window, text="My IP address:").grid(row=0, column=0, sticky="W")
 tkinter.Button(window, text="Get IP", command=get_ip).grid(row=0, column=3, sticky="W")
 
-custom_peer = tkinter.StringVar()
-custom_peer_e = tkinter.Entry(window, textvariable=custom_peer, width=20)
-custom_peer_e.grid(row=0, column=3, sticky="E")
-tkinter.Button(window, text="Add peer manually", command=add_peer_manually).grid(row=0, column=6, sticky="W")
-
 local_ip = tkinter.StringVar()
 ip_e = tkinter.Entry(window, textvariable=local_ip, width=35)
 ip_e.grid(row=0, column=1, sticky="E")
 
 #tkinter.Entry(window, width=40).grid(row=0, column=1, sticky="E")
-tkinter.Label(window, text=" ").grid(row=0, column=2) #white space between lists
+tkinter.Label(window, text="  ").grid(row=0, column=2) #white space between lists
 tkinter.Label(window, text=" ").grid(row=0, column=5) #white space between lists
 
 # Row 1
@@ -233,11 +199,7 @@ tkinter.Button(window, text="Scan network for peers", command=check_subnet_for_p
 
 # Row 2
 tkinter.Label(window, text="My file list:").grid(row=2, column=0, sticky="W")
-tkinter.Button(window, text="Browse folder", command=scan_dir_for_files).grid(row=2, column=1, sticky="E")
 tkinter.Label(window, text="Peer file list:").grid(row=2, column=3, sticky="W")
-peer_ip = tkinter.StringVar()
-peer_ip = "Peer IP:"
-tkinter.Label(window, text=peer_ip).grid(row=2, column=3, sticky="E")
 tkinter.Label(window, text="Peer list:").grid(row=2, column=6, sticky="W")
 
 # Row 3
