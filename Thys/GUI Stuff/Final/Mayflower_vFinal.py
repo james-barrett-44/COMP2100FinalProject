@@ -299,7 +299,7 @@ def send_file_to_peer():
     else:
         add_line_to_output('Connection established.')
 
-    source_file_bytes = "File:{0}".format(source_file).encode()
+    #source_file_bytes = "File:{0}".format(source_file).encode()
     source_file_bytes = "File:{0}".format(source_file)
 
     source_file_pickle = pickle.dumps(source_file_bytes)
@@ -362,7 +362,7 @@ def select_file_in_list():
         add_line_to_output("No file(s) available")
     elif myfiles_list.curselection():
         list_file = myfiles_list.get(myfiles_list.curselection())
-        file_name_to_send.set(str(folder_label.get())+list_file)
+        file_name_to_send.set(str(folder_label.get())+"/"+list_file)
         add_line_to_output("Selected file: %s as file to send" % list_file)
     else:
         add_line_to_output("No file selected")
