@@ -13,7 +13,7 @@ import pickle
 
 def popupmsg(msg):
     popup = tkinter.Tk()
-    popup.wm_title("!")
+    popup.wm_title("HELP")
     label = tkinter.Label(popup, text=msg)
     label.pack(side="top", fill="x", pady=10)
     B1 = tkinter.Button(popup, text="Okay", command = popup.destroy)
@@ -282,6 +282,7 @@ def send_myfile_list():
 
 
 def send_file_to_peer():
+    "https://codereview.stackexchange.com/questions/197462/large-file-transmission-over-socket-in-python"
     global source_file_name
     source_file = source_file_name.get()
     server_addr, server_port = peer_ip.get()[9:-1], '1234'
@@ -368,7 +369,8 @@ def select_file_in_list():
         add_line_to_output("No file selected")
 
 def file_server():
-    print('Launching bigfile server.')
+    "https://codereview.stackexchange.com/questions/197462/large-file-transmission-over-socket-in-python"
+    print('Launching server.')
     serv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         serv_sock.bind((get_ip(), 1234))
