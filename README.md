@@ -3,17 +3,17 @@
 peer to peer file transfer
 
 Deliverables:
-
-- Documention 
+Sends any type of file.
 
 Features:
 - Unique application protocol
-- Sends file up to 1 GB
+- Send and download files 
 - Easy for user 
 
+Demo:
+https://www.youtube.com/watch?v=5pOBA51MASc
+
 Team Members:
-
 -Thys Nadema, Developer 
-
 -James Barrett, Developer
 
